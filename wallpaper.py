@@ -1,28 +1,13 @@
 import os
-import requests
 import ctypes
 import threading
 import time
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QInputDialog, QMessageBox
 from datetime import datetime
-from config import API_KEY, WALLPAPER_DIR
+from config import WALLPAPER_DIR
 from ui import WallpaperChangerUI
-
-def get_weather(location):
-    url = f"http://api.weatherapi.com/v1/current.json?key={API_KEY}&q={location}"
-    try:
-        response = requests.get(url)
-        print(response)
-        data = response.json()
-        print(data)
-        if "error" in data:
-            QMessageBox.critical(None, "Error", "Invalid location. Please try again.")
-            return None
-        return data
-    except Exception as e:
-        QMessageBox.critical(None, "Error", f"Failed to fetch weather data: {str(e)}")
-        return None
+from utilities import get_weather,set_wallpaper
 
 def get_time_of_day():
     hour = datetime.now().hour
@@ -34,15 +19,8 @@ def get_time_of_day():
     else:
         return "Night"
 
-def set_wallpaper(image_path):
-    print(image_path)
-    if os.path.exists(image_path):
-        ctypes.windll.user32.SystemParametersInfoW(20, 0, image_path, 3)
-    else:
-        QMessageBox.critical(None, "Error", "Wallpaper file not found.")
 
-def change_wallpaper(location):
-    weather_data = get_weather(location)
+def change_wallpaper(location,weather_data):
     if not weather_data:
         return
 
@@ -89,18 +67,19 @@ def change_wallpaper(location):
     wallpaper_path = os.path.join(WALLPAPER_DIR, "Assets", "Konbini", selected_wallpaper)
     set_wallpaper(wallpaper_path)
 
-def wallpaper_updater(location):
+def wallpaper_updater(location,data):
     while True:
-        change_wallpaper(location)
+        change_wallpaper(location,data)
         time.sleep(3600)  # Update every hour
 
 def main():
     app = QApplication([])
     location, ok = QInputDialog.getText(None, "Location Input", "Enter your city or location:")
+    data = get_weather(location)
     if ok and location:
-        ui = WallpaperChangerUI()
+        ui = WallpaperChangerUI(data)
         ui.show()
-        updater_thread = threading.Thread(target=wallpaper_updater, args=(location,), daemon=True)
+        updater_thread = threading.Thread(target=wallpaper_updater, args=(location,data), daemon=True)
         updater_thread.start()
         app.exec_()
 

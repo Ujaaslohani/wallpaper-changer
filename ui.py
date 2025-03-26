@@ -1,39 +1,86 @@
-from PyQt5 import QtWidgets, QtGui,QtCore
-from PyQt5.QtWidgets import QFileDialog, QLabel, QPushButton, QVBoxLayout, QWidget,QMessageBox
-import os
+from PyQt5 import QtWidgets,QtCore
+from PyQt5.QtWidgets import QFileDialog, QLabel, QPushButton, QVBoxLayout, QWidget
+from PyQt5.QtCore import Qt, QTimer, QTime
+from PyQt5.QtGui import QPixmap,QMovie
+import os,requests
 import glob
-import ctypes
 from config import WALLPAPER_DIR
-
-def set_wallpaper(image_path):
-    print(image_path)
-    if os.path.exists(image_path):
-        ctypes.windll.user32.SystemParametersInfoW(20, 0, image_path, 3)
-    else:
-        QMessageBox.critical(None, "Error", "Wallpaper file not found.")
+from utilities import set_wallpaper
 
 class WallpaperChangerUI(QWidget):
-    def __init__(self):
+    def __init__(self,data):
         super().__init__()
+
+        self.data=data
+
         self.setWindowTitle("Wallpaper Changer")
         self.setGeometry(100, 100, 840, 640)
 
+        # text
         self.label = QLabel("Select a wallpaper theme or upload a custom one", self)
         self.label.setAlignment(QtCore.Qt.AlignCenter)
 
+        # time 
+        self.time_label = QLabel("Fetching Time...", self)
+        self.time_label.setAlignment(QtCore.Qt.AlignCenter)
+
+        # location and temperature
+        self.weather_label = QLabel("Fetching Weather...", self)
+        self.weather_label.setAlignment(QtCore.Qt.AlignCenter)
+
+        # Weather Animation
+        self.weather_icon = QLabel(self)
+        self.weather_icon.setAlignment(QtCore.Qt.AlignCenter)
+
+        # upload window
         self.upload_button = QPushButton("Upload Custom Wallpaper", self)
         self.upload_button.clicked.connect(self.upload_wallpaper)
 
+        # choose theme window
         self.theme_button = QPushButton("Choose Theme", self)
         self.theme_button.clicked.connect(self.choose_theme)
 
         layout = QVBoxLayout()
         layout.addWidget(self.label)
         layout.addWidget(self.upload_button)
-        layout.addWidget(self.theme_button,stretch=2)
+        layout.addWidget(self.theme_button)
+        layout.addWidget(self.time_label)
+        layout.addWidget(self.weather_label)
+        layout.addWidget(self.weather_icon)
         self.setLayout(layout)
 
         self.apply_stylesheet("styles.qss")
+
+        # Start timers to update time and weather
+        self.update_time()
+        self.update_weather()
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_time)
+        self.timer.start(1000)  # Update every second
+
+        self.weather_timer = QTimer(self)
+        self.weather_timer.timeout.connect(self.update_weather)
+        self.weather_timer.start(60000)  # Update every minute
+
+    def update_time(self):
+        current_time=QTime.currentTime().toString("hh.mm A")
+        self.time_label.setText(f"Current Time: {current_time}")
+
+    def update_weather(self):
+        city=self.data["location"]["name"]
+        country=self.data["location"]["country"]
+        temp=self.data["current"]["temp_c"]
+        condition=self.data["current"]["condition"]["text"]
+        icon_url="https:"+self.data["current"]["condition"]["icon"]
+
+        # update label
+        self.weather_label.setText(f" {city}, {country} | {temp}°C | {condition}")
+
+        pixmap=QPixmap()
+        pixmap.loadFromData(requests.get(icon_url).content)
+        self.weather_icon.setPixmap(pixmap.scaled(64,64,Qt.KeepAspectRatio))
+
 
     def apply_stylesheet(self,file_path):
         if os.path.exists(file_path):
