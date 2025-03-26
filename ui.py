@@ -30,8 +30,17 @@ class WallpaperChangerUI(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(self.label)
         layout.addWidget(self.upload_button)
-        layout.addWidget(self.theme_button)
+        layout.addWidget(self.theme_button,stretch=2)
         self.setLayout(layout)
+
+        self.apply_stylesheet("styles.qss")
+
+    def apply_stylesheet(self,file_path):
+        if os.path.exists(file_path):
+            with open(file_path,"r") as f:
+                self.setStyleSheet(f.read())
+        else:
+            print(f"Stylesheet '{file_path}' not found!")
 
     def upload_wallpaper(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Select Wallpaper", "", "Images (*.png *.jpg *.jpeg)")
