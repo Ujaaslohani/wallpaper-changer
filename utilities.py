@@ -3,6 +3,7 @@ from config import API_KEY
 from PyQt5.QtWidgets import QMessageBox
 
 def get_weather(location):
+    """Fetch weather data from API"""
     url = f"http://api.weatherapi.com/v1/current.json?key={API_KEY}&q={location}"
     try:
         response = requests.get(url)

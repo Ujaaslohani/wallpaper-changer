@@ -68,18 +68,22 @@ class WallpaperChangerUI(QWidget):
         self.time_label.setText(f"Current Time: {current_time}")
 
     def update_weather(self):
-        city=self.data["location"]["name"]
-        country=self.data["location"]["country"]
-        temp=self.data["current"]["temp_c"]
-        condition=self.data["current"]["condition"]["text"]
-        icon_url="https:"+self.data["current"]["condition"]["icon"]
+        """Update UI with new weather data dynamically"""
+        if self.data:
+            city = self.data["location"]["name"]
+            country = self.data["location"]["country"]
+            temp = self.data["current"]["temp_c"]
+            condition = self.data["current"]["condition"]["text"]
+            icon_url = "https:" + self.data["current"]["condition"]["icon"]
 
-        # update label
-        self.weather_label.setText(f" {city}, {country} | {temp}°C | {condition}")
+            # Update label
+            self.weather_label.setText(f"{city}, {country} | {temp}°C | {condition}")
 
-        pixmap=QPixmap()
-        pixmap.loadFromData(requests.get(icon_url).content)
-        self.weather_icon.setPixmap(pixmap.scaled(64,64,Qt.KeepAspectRatio))
+            # Load and display the weather icon dynamically
+            pixmap = QPixmap()
+            pixmap.loadFromData(requests.get(icon_url).content)
+            self.weather_icon.setPixmap(pixmap.scaled(64, 64, Qt.KeepAspectRatio))
+
 
 
     def apply_stylesheet(self,file_path):

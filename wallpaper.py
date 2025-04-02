@@ -10,6 +10,7 @@ from ui import WallpaperChangerUI
 from utilities import get_weather,set_wallpaper
 
 def get_time_of_day():
+    """Determine the time of day for wallpaper selection"""
     hour = datetime.now().hour
     print(hour)
     if 5 <= hour < 16:
@@ -20,7 +21,7 @@ def get_time_of_day():
         return "Night"
 
 
-def change_wallpaper(location,weather_data):
+def change_wallpaper(weather_data):
     if not weather_data:
         return
 
@@ -67,20 +68,29 @@ def change_wallpaper(location,weather_data):
     wallpaper_path = os.path.join(WALLPAPER_DIR, "Assets", "Konbini", selected_wallpaper)
     set_wallpaper(wallpaper_path)
 
-def wallpaper_updater(location,data):
+
+def wallpaper_updater(ui, location):
+    """Fetch weather every hour and update wallpaper & UI"""
     while True:
-        change_wallpaper(location,data)
-        time.sleep(3600)  # Update every hour
+        weather_data = get_weather(location)
+        if weather_data:
+            ui.update_weather()  # Update UI dynamically
+            change_wallpaper(weather_data)  # Change wallpaper
+        time.sleep(3600)  # Wait for an hour before updating again
 
 def main():
     app = QApplication([])
     location, ok = QInputDialog.getText(None, "Location Input", "Enter your city or location:")
-    data = get_weather(location)
+    
     if ok and location:
-        ui = WallpaperChangerUI(data)
+        initial_data = get_weather(location)
+        ui = WallpaperChangerUI(initial_data)
         ui.show()
-        updater_thread = threading.Thread(target=wallpaper_updater, args=(location,data), daemon=True)
+
+        # Start wallpaper updater in a separate thread
+        updater_thread = threading.Thread(target=wallpaper_updater, args=(ui, location), daemon=True)
         updater_thread.start()
+
         app.exec_()
 
 if __name__ == "__main__":
