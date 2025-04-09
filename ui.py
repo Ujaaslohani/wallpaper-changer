@@ -1,17 +1,18 @@
 from PyQt5 import QtWidgets,QtCore
-from PyQt5.QtWidgets import QFileDialog, QLabel, QPushButton, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QFileDialog, QLabel, QPushButton, QVBoxLayout, QWidget, QSystemTrayIcon, QMenu, QAction, QInputDialog
 from PyQt5.QtCore import Qt, QTimer, QTime
 from PyQt5.QtGui import QPixmap,QMovie
 import os,requests
 import glob
 from config import WALLPAPER_DIR
-from utilities import set_wallpaper
+from utilities import set_wallpaper,get_weather,change_wallpaper
 
 class WallpaperChangerUI(QWidget):
-    def __init__(self,data):
+    def __init__(self,data,location):
         super().__init__()
 
         self.data=data
+        self.location = location
 
         self.setWindowTitle("Wallpaper Changer")
         self.setGeometry(100, 100, 840, 640)
@@ -19,6 +20,25 @@ class WallpaperChangerUI(QWidget):
         # text
         self.label = QLabel("Select a wallpaper theme or upload a custom one", self)
         self.label.setAlignment(QtCore.Qt.AlignCenter)
+
+        # System Tray
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_ComputerIcon))
+        tray_menu = QMenu()
+        restore_action = QAction("Restore", self)
+        restore_action.triggered.connect(self.show)
+        tray_menu.addAction(restore_action)
+        quit_action = QAction("Exit", self)
+        quit_action.triggered.connect(QtWidgets.qApp.quit)
+        tray_menu.addAction(quit_action)
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.show()
+
+        self.change_location_button = QPushButton("Change Location", self)
+        self.change_location_button.clicked.connect(self.change_location)
+
+        self.change_api_key_button = QPushButton("Change API Key", self)
+        self.change_api_key_button.clicked.connect(self.change_api_key)
 
         # time 
         self.time_label = QLabel("Fetching Time...", self)
@@ -44,6 +64,8 @@ class WallpaperChangerUI(QWidget):
         layout.addWidget(self.label)
         layout.addWidget(self.upload_button)
         layout.addWidget(self.theme_button)
+        layout.addWidget(self.change_location_button)
+        layout.addWidget(self.change_api_key_button)
         layout.addWidget(self.time_label)
         layout.addWidget(self.weather_label)
         layout.addWidget(self.weather_icon)
@@ -85,6 +107,27 @@ class WallpaperChangerUI(QWidget):
             self.weather_icon.setPixmap(pixmap.scaled(64, 64, Qt.KeepAspectRatio))
 
 
+    def closeEvent(self, event):
+        """Minimize to tray on close"""
+        event.ignore()
+        self.hide()
+        self.tray_icon.showMessage("Wallpaper Changer", "App is minimized to tray.", QSystemTrayIcon.Information, 3000)
+
+    def change_location(self):
+        new_location, ok = QInputDialog.getText(self, "Change Location", "Enter new location:")
+        if ok and new_location:
+            self.location = new_location
+            self.data = get_weather(new_location)
+            self.update_weather()
+            change_wallpaper(self.data)
+            QtWidgets.QMessageBox.information(self, "Location Changed", f"Location updated to: {new_location}")
+
+    def change_api_key(self):
+        from config import set_api_key  # You must define this function in config.py
+        new_key, ok = QInputDialog.getText(self, "Change API Key", "Enter new API key:")
+        if ok and new_key:
+            set_api_key(new_key)
+            QtWidgets.QMessageBox.information(self, "API Key Updated", "New API key has been set.")
 
     def apply_stylesheet(self,file_path):
         if os.path.exists(file_path):
